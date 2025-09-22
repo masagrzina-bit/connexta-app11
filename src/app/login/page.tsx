@@ -12,7 +12,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -54,12 +54,13 @@ export default function LoginPage() {
           Login
         </button>
       </form>
-      <p className="mt-4">
-        Don't have an account?{" "}
-        <Link href="/register" className="text-blue-600 font-bold">
-          Register
-        </Link>
-      </p>
+  <p className="mt-4">
+  Don&apos;t have an account?{" "}
+  <Link href="/register" className="text-blue-600 font-bold">
+    Register
+  </Link>
+</p>
+
     </div>
   );
 }
