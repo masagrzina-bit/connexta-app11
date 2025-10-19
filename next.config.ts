@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  // više ne koristimo "appDir" jer je automatski aktiviran
 };
 
 export default nextConfig;
