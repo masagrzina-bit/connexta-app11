@@ -2,6 +2,7 @@
   "name": "connexta-app",
   "version": "0.1.0",
   "private": true,
+  
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +15,7 @@
     "@heroicons/react": "^2.2.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.75.1",
+    "dotenv": "^17.2.3",
     "next": "14.2.12",
     "next-superjson": "^2.0.0",
     "react": "18.2.0",

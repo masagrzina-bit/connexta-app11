@@ -2,28 +2,25 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import { useRouter } from 'next/navigation'
 
-export default function UpdatePasswordPage() {
-  const [password, setPassword] = useState('')
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
-  async function handleUpdate(e: React.FormEvent) {
+  async function handleReset(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
     setMessage('')
 
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://connexta.app/update-password',
+    })
 
     if (error) setError(error.message)
-    else {
-      setMessage('✅ Lozinka uspešno ažurirana! Možete se ponovo prijaviti.')
-      setTimeout(() => router.push('/login'), 2000)
-    }
+    else setMessage('✅ Proveri svoj email – poslat je link za reset lozinke.')
 
     setLoading(false)
   }
@@ -31,19 +28,19 @@ export default function UpdatePasswordPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <form
-        onSubmit={handleUpdate}
+        onSubmit={handleReset}
         className="bg-white p-8 rounded-2xl shadow-lg w-96"
       >
         <h1 className="text-2xl font-bold text-center mb-6">
-          Nova lozinka
+          Zaboravljena lozinka
         </h1>
 
         <input
-          type="password"
-          placeholder="Unesite novu lozinku"
+          type="email"
+          placeholder="Email adresa"
           className="w-full mb-3 px-4 py-2 border rounded-lg"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
 
@@ -55,7 +52,7 @@ export default function UpdatePasswordPage() {
           disabled={loading}
           className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
         >
-          {loading ? 'Ažuriranje...' : 'Sačuvaj novu lozinku'}
+          {loading ? 'Slanje...' : 'Pošalji link za reset'}
         </button>
 
         <p className="text-center mt-4 text-sm">
