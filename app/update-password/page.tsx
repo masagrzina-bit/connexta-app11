@@ -1,69 +1,47 @@
-'use client'
-
-import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import { useRouter } from 'next/navigation'
+"use client";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function UpdatePasswordPage() {
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setMessage('')
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
 
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabase.auth.updateUser({ password });
 
-    if (error) setError(error.message)
-    else {
-      setMessage('✅ Lozinka uspešno ažurirana! Možete se ponovo prijaviti.')
-      setTimeout(() => router.push('/login'), 2000)
-    }
-
-    setLoading(false)
-  }
+    if (error) setError(error.message);
+    else setMessage("Password updated successfully! You can log in now.");
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleUpdate}
-        className="bg-white p-8 rounded-2xl shadow-lg w-96"
-      >
-        <h1 className="text-2xl font-bold text-center mb-6">
-          Nova lozinka
-        </h1>
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+      <div className="p-8 bg-white rounded-lg shadow-lg w-96">
+        <h1 className="text-2xl font-bold mb-4 text-center">Update Password</h1>
+        {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
+        {message && <p className="text-green-600 mb-3 text-center">{message}</p>}
 
-        <input
-          type="password"
-          placeholder="Unesite novu lozinku"
-          className="w-full mb-3 px-4 py-2 border rounded-lg"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-
-        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-        {message && <p className="text-green-600 text-sm mb-3">{message}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          {loading ? 'Ažuriranje...' : 'Sačuvaj novu lozinku'}
-        </button>
-
-        <p className="text-center mt-4 text-sm">
-          <a href="/login" className="text-blue-600 hover:underline">
-            Nazad na prijavu
-          </a>
-        </p>
-      </form>
+        <form onSubmit={handleUpdate} className="flex flex-col">
+          <input
+            type="password"
+            placeholder="New password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mb-3 p-2 border rounded"
+            required
+          />
+          <button
+            type="submit"
+            className="bg-green-600 text-white py-2 rounded hover:bg-green-700"
+          >
+            Update Password
+          </button>
+        </form>
+      </div>
     </div>
-  )
+  );
 }

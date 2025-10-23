@@ -2,7 +2,6 @@
   "name": "connexta-app",
   "version": "0.1.0",
   "private": true,
-  
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -30,7 +29,7 @@
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.38.0",
+    "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.12",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.14",

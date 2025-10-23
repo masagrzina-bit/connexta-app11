@@ -1,66 +1,49 @@
-'use client'
-
-import { useState } from 'react'
-import { supabase } from '@/lib/supabaseClient'
+"use client";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  async function handleReset(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setMessage('')
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://connexta.app/update-password',
-    })
+      redirectTo: "https://connexta.app/update-password",
+    });
 
-    if (error) setError(error.message)
-    else setMessage('✅ Proveri svoj email – poslat je link za reset lozinke.')
-
-    setLoading(false)
-  }
+    if (error) setError(error.message);
+    else setMessage("Check your email for the password reset link.");
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleReset}
-        className="bg-white p-8 rounded-2xl shadow-lg w-96"
-      >
-        <h1 className="text-2xl font-bold text-center mb-6">
-          Zaboravljena lozinka
-        </h1>
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+      <div className="p-8 bg-white rounded-lg shadow-lg w-96">
+        <h1 className="text-2xl font-bold mb-4 text-center">Forgot Password</h1>
+        {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
+        {message && <p className="text-green-600 mb-3 text-center">{message}</p>}
 
-        <input
-          type="email"
-          placeholder="Email adresa"
-          className="w-full mb-3 px-4 py-2 border rounded-lg"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-
-        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-        {message && <p className="text-green-600 text-sm mb-3">{message}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          {loading ? 'Slanje...' : 'Pošalji link za reset'}
-        </button>
-
-        <p className="text-center mt-4 text-sm">
-          <a href="/login" className="text-blue-600 hover:underline">
-            Nazad na prijavu
-          </a>
-        </p>
-      </form>
+        <form onSubmit={handleReset} className="flex flex-col">
+          <input
+            type="email"
+            placeholder="Enter your email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mb-3 p-2 border rounded"
+            required
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          >
+            Send Reset Link
+          </button>
+        </form>
+      </div>
     </div>
-  )
+  );
 }
