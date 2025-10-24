@@ -28,14 +28,23 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({
-      accessToken: token,
-      password,
+    // Ako token postoji, postavi sesiju prije update-a lozinke
+    if (token) {
+      const { error: sessionError } = await supabase.auth.setSession(token);
+      if (sessionError) {
+        setError(sessionError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password, // ✅ samo password ide ovdje
     });
 
     setLoading(false);
 
-    if (error) setError(error.message);
+    if (updateError) setError(updateError.message);
     else {
       setMessage('Password updated successfully!');
       setTimeout(() => router.push('/login'), 2000);
