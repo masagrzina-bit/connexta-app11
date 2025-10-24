@@ -45,9 +45,7 @@ export default function ProfilePage() {
     if (error) console.error(error);
     else
       setPosts((prev) =>
-        prev.map((post) =>
-          post.id === id ? { ...post, content: newContent } : post
-        )
+        prev.map((post) => (post.id === id ? { ...post, content: newContent } : post))
       );
   };
 
@@ -58,7 +56,11 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    fetchUserPosts();
+    const fetchData = async () => {
+      await fetchUserPosts();
+    };
+
+    fetchData();
 
     // Real-time subscription za nove postove korisnika
     const subscription = supabase
@@ -68,15 +70,7 @@ export default function ProfilePage() {
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
           if (payload.new.user === userFullName) {
-            setPosts((prev) => [
-              {
-                id: payload.new.id,
-                user: payload.new.user,
-                content: payload.new.content,
-                created_at: payload.new.created_at,
-              } as PostType,
-              ...prev,
-            ]);
+            setPosts((prev) => [payload.new as PostType, ...prev]);
           }
         }
       )
@@ -89,21 +83,14 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-xl mx-auto mt-10">
-      <h1 className="text-3xl font-semibold mb-6 text-center">
-        {userFullName}'s Profile
-      </h1>
+      <h1 className="text-3xl font-semibold mb-6 text-center">{userFullName}'s Profile</h1>
 
       {posts.length === 0 && (
         <p className="text-gray-500 text-center">Još nema tvojih postova...</p>
       )}
 
       {posts.map((post) => (
-        <Post
-          key={post.id}
-          {...post}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <Post key={post.id} {...post} onEdit={handleEdit} onDelete={handleDelete} />
       ))}
     </div>
   );
