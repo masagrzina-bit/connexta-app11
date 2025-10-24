@@ -56,10 +56,10 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
+    // Async funkcija unutar useEffect
     const fetchData = async () => {
       await fetchUserPosts();
     };
-
     fetchData();
 
     // Real-time subscription za nove postove korisnika
@@ -70,13 +70,16 @@ export default function ProfilePage() {
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
           if (payload.new.user === userFullName) {
+            // Cast payload.new u PostType
             setPosts((prev) => [payload.new as PostType, ...prev]);
           }
         }
       )
       .subscribe();
 
-    return () => supabase.removeChannel(subscription);
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [userFullName]);
 
   if (!userFullName) return <p className="text-center mt-20">Učitavanje...</p>;
