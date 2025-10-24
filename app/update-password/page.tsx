@@ -10,6 +10,7 @@ export default function UpdatePasswordPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,26 +24,30 @@ export default function UpdatePasswordPage() {
     setError(null);
 
     if (!accessToken || !refreshToken) {
-      setError('Invalid or missing access/refresh token.');
+      setError('Invalid or missing access token.');
       setLoading(false);
       return;
     }
 
-    // Postavi sesiju sa tokenom
+    if (password !== confirmPassword) {
+      setError("Passwords don't match!");
+      setLoading(false);
+      return;
+    }
+
+    // Set Supabase session first
     const { error: sessionError } = await supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
-
     if (sessionError) {
       setError(sessionError.message);
       setLoading(false);
       return;
     }
 
-    // Update lozinke
+    // Update password
     const { error: updateError } = await supabase.auth.updateUser({ password });
-
     setLoading(false);
 
     if (updateError) setError(updateError.message);
@@ -61,6 +66,7 @@ export default function UpdatePasswordPage() {
       >
         {error && <p className="text-red-500 mb-4">{error}</p>}
         {message && <p className="text-green-500 mb-4">{message}</p>}
+
         <Input
           type="password"
           placeholder="New Password"
@@ -68,6 +74,14 @@ export default function UpdatePasswordPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <Input
+          type="password"
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        />
+
         <Button type="submit" disabled={loading}>
           {loading ? 'Updating...' : 'Update Password'}
         </Button>
