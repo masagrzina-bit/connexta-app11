@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Post from '../Post/Post';
+import Post from '../../app/components/Post/Post'
 import { supabase } from '@/lib/supabaseClient';
 
 interface PostType {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import Feed from '@/components/Feed/Feed';
+import Feed from '../../components/Feed/Feed'
 interface UserType {
   id: string;
   email: string | null;
