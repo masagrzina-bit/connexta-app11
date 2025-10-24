@@ -15,7 +15,7 @@ interface PostType {
 
 interface UserType {
   email: string | null;
-  user_metadata: { full_name?: string; avatar_url?: string };
+  user_metadata: { full_name: string; avatar_url?: string };
   created_at: string;
 }
 
@@ -26,8 +26,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<UserType | null>(null);
 
   // Profile edit state
-  const [name, setName] = useState(user?.user_metadata.full_name || '');
-  const [emailProfile, setEmailProfile] = useState(user?.email || '');
+  const [name, setName] = useState('');
+  const [emailProfile, setEmailProfile] = useState('');
   const [passwordProfile, setPasswordProfile] = useState('');
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
@@ -44,9 +44,19 @@ export default function DashboardPage() {
 
   const fetchUser = async () => {
     const { data } = await supabase.auth.getUser();
-    setUser(data?.user || null);
-    setName(data?.user?.user_metadata.full_name || '');
-    setEmailProfile(data?.user?.email || '');
+    if (data?.user) {
+      const u: UserType = {
+        email: data.user.email ?? null,
+        user_metadata: {
+          full_name: data.user.user_metadata.full_name ?? '',
+          avatar_url: data.user.user_metadata.avatar_url ?? ''
+        },
+        created_at: data.user.created_at
+      };
+      setUser(u);
+      setName(u.user_metadata.full_name);
+      setEmailProfile(u.email ?? '');
+    }
   };
 
   const handleCreatePost = async (e: React.FormEvent) => {
@@ -56,11 +66,14 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from('posts')
       .insert([
-        { content: newPost, user: user?.user_metadata.full_name || 'You', created_at: new Date().toISOString() }
+        {
+          content: newPost,
+          user: user?.user_metadata.full_name || 'You',
+          created_at: new Date().toISOString()
+        }
       ])
       .select();
     setLoading(false);
-
     if (error) console.error(error);
     else if (data) setPosts((prev) => [data[0], ...prev]);
     setNewPost('');
@@ -78,33 +91,38 @@ export default function DashboardPage() {
     else setPosts((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/login';
-  };
-
   const handleUpdateProfile = async () => {
+    if (!user) return;
     setLoadingProfile(true);
     setProfileMessage(null);
     setProfileError(null);
 
     try {
-      // Update user metadata (name)
-      const { error: metaError } = await supabase.auth.updateUser({
-        data: { full_name: name },
-        email: emailProfile,
-        password: passwordProfile || undefined,
-      });
-
-      if (metaError) {
-        setProfileError(metaError.message);
-      } else {
-        setProfileMessage('Profile updated successfully!');
-        setPasswordProfile('');
-        fetchUser(); // refresh user data
+      // Update email
+      if (emailProfile !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: emailProfile });
+        if (emailError) throw emailError;
       }
+
+      // Update password
+      if (passwordProfile) {
+        const { error: passwordError } = await supabase.auth.updateUser({ password: passwordProfile });
+        if (passwordError) throw passwordError;
+      }
+
+      // Update name in metadata
+      if (name !== user.user_metadata.full_name) {
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: { full_name: name }
+        });
+        if (metaError) throw metaError;
+      }
+
+      setProfileMessage('Profile updated successfully!');
+      fetchUser();
+      setPasswordProfile('');
     } catch (err: any) {
-      setProfileError(err.message);
+      setProfileError(err.message || 'Failed to update profile');
     } finally {
       setLoadingProfile(false);
     }
@@ -128,6 +146,11 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <h1 className="text-3xl font-bold mb-6 text-center">Dashboard</h1>
@@ -143,9 +166,7 @@ export default function DashboardPage() {
               />
             ) : (
               <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl">
-                {user.user_metadata.full_name
-                  ? user.user_metadata.full_name.charAt(0).toUpperCase()
-                  : 'U'}
+                {user.user_metadata.full_name.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
             <div>
@@ -158,11 +179,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <Button
-          variant="secondary"
-          onClick={handleLogout}
-          className="mb-4 w-full"
-        >
+        <Button variant="secondary" onClick={handleLogout} className="mb-4 w-full">
           Log Out
         </Button>
 
@@ -180,12 +197,7 @@ export default function DashboardPage() {
 
       <div className="space-y-4 max-w-md mx-auto">
         {posts.map((post) => (
-          <Post
-            key={post.id}
-            {...post}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+          <Post key={post.id} {...post} onEdit={handleEdit} onDelete={handleDelete} />
         ))}
       </div>
 
@@ -218,12 +230,8 @@ export default function DashboardPage() {
           {loadingProfile ? 'Updating...' : 'Update Profile'}
         </Button>
 
-        {profileMessage && (
-          <p className="text-green-500 mt-2">{profileMessage}</p>
-        )}
-        {profileError && (
-          <p className="text-red-500 mt-2">{profileError}</p>
-        )}
+        {profileMessage && <p className="text-green-500 mt-2">{profileMessage}</p>}
+        {profileError && <p className="text-red-500 mt-2">{profileError}</p>}
       </div>
     </div>
   );
