@@ -20,12 +20,10 @@ export default function ProfilePage() {
   const fetchUserPosts = async () => {
     const { data: userData } = await supabase.auth.getUser();
     const fullName = userData.user?.user_metadata.full_name;
-
     if (!fullName) {
       router.push('/login');
       return;
     }
-
     setUserFullName(fullName);
 
     const { data, error } = await supabase
@@ -47,7 +45,9 @@ export default function ProfilePage() {
     if (error) console.error(error);
     else
       setPosts((prev) =>
-        prev.map((post) => (post.id === id ? { ...post, content: newContent } : post))
+        prev.map((post) =>
+          post.id === id ? { ...post, content: newContent } : post
+        )
       );
   };
 
@@ -60,8 +60,7 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchUserPosts();
 
-    if (!userFullName) return;
-
+    // Real-time subscription za nove postove korisnika
     const subscription = supabase
       .channel('public:posts')
       .on(
@@ -69,22 +68,30 @@ export default function ProfilePage() {
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
           if (payload.new.user === userFullName) {
-            setPosts((prev) => [payload.new, ...prev]);
+            setPosts((prev) => [
+              {
+                id: payload.new.id,
+                user: payload.new.user,
+                content: payload.new.content,
+                created_at: payload.new.created_at,
+              } as PostType,
+              ...prev,
+            ]);
           }
         }
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
+    return () => supabase.removeChannel(subscription);
   }, [userFullName]);
 
   if (!userFullName) return <p className="text-center mt-20">Učitavanje...</p>;
 
   return (
     <div className="max-w-xl mx-auto mt-10">
-      <h1 className="text-3xl font-semibold mb-6 text-center">{userFullName}'s Profile</h1>
+      <h1 className="text-3xl font-semibold mb-6 text-center">
+        {userFullName}'s Profile
+      </h1>
 
       {posts.length === 0 && (
         <p className="text-gray-500 text-center">Još nema tvojih postova...</p>
