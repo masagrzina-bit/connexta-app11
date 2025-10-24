@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Input from '@/app/components/Input';
 import Button from '@/app/components/Button';
@@ -16,6 +16,23 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   const token = searchParams.get('access_token') || '';
+  const refreshToken = searchParams.get('refresh_token') || '';
+
+  useEffect(() => {
+    const setSupabaseSession = async () => {
+      if (token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: token,
+          refresh_token: refreshToken
+        });
+        if (sessionError) {
+          setError(sessionError.message);
+        }
+      }
+    };
+
+    setSupabaseSession();
+  }, [token, refreshToken]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,23 +45,11 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // Ako token postoji, postavi sesiju prije update-a lozinke
-    if (token) {
-      const { error: sessionError } = await supabase.auth.setSession(token);
-      if (sessionError) {
-        setError(sessionError.message);
-        setLoading(false);
-        return;
-      }
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      password, // ✅ samo password ide ovdje
-    });
+    const { error } = await supabase.auth.updateUser({ password });
 
     setLoading(false);
 
-    if (updateError) setError(updateError.message);
+    if (error) setError(error.message);
     else {
       setMessage('Password updated successfully!');
       setTimeout(() => router.push('/login'), 2000);
