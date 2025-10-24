@@ -24,6 +24,23 @@ export default function Feed() {
     else setPosts(data as PostType[]);
   };
 
+  useEffect(() => {
+    fetchPosts();
+
+    const subscription = supabase
+      .channel('public:posts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        (payload) => {
+          setPosts((prev) => [payload.new, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(subscription);
+  }, []);
+
   const handleEdit = async (id: string, newContent: string) => {
     const { error } = await supabase
       .from('posts')
@@ -39,43 +56,24 @@ export default function Feed() {
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from('posts').delete().eq('id', id);
-
     if (error) console.error(error);
     else setPosts((prev) => prev.filter((post) => post.id !== id));
   };
 
-  useEffect(() => {
-    fetchPosts();
-
-    const subscription = supabase
-      .channel('public:posts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'posts' },
-        (payload) => {
-          setPosts((prev) => [payload.new as PostType, ...prev]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
-
   return (
-    <div className="mt-6">
-      {posts.length === 0 && (
+    <div className="max-w-xl mx-auto mt-10">
+      {posts.length === 0 ? (
         <p className="text-gray-500 text-center">Još nema postova...</p>
+      ) : (
+        posts.map((post) => (
+          <Post
+            key={post.id}
+            {...post}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ))
       )}
-      {posts.map((post) => (
-        <Post
-          key={post.id}
-          {...post}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      ))}
     </div>
   );
 }

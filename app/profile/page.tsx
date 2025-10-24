@@ -20,10 +20,12 @@ export default function ProfilePage() {
   const fetchUserPosts = async () => {
     const { data: userData } = await supabase.auth.getUser();
     const fullName = userData.user?.user_metadata.full_name;
+
     if (!fullName) {
       router.push('/login');
       return;
     }
+
     setUserFullName(fullName);
 
     const { data, error } = await supabase
@@ -43,9 +45,10 @@ export default function ProfilePage() {
       .eq('id', id);
 
     if (error) console.error(error);
-    else setPosts((prev) =>
-      prev.map((post) => (post.id === id ? { ...post, content: newContent } : post))
-    );
+    else
+      setPosts((prev) =>
+        prev.map((post) => (post.id === id ? { ...post, content: newContent } : post))
+      );
   };
 
   const handleDelete = async (id: string) => {
@@ -57,7 +60,8 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchUserPosts();
 
-    // Real-time subscription za nove postove korisnika
+    if (!userFullName) return;
+
     const subscription = supabase
       .channel('public:posts')
       .on(
@@ -71,7 +75,9 @@ export default function ProfilePage() {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(subscription);
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [userFullName]);
 
   if (!userFullName) return <p className="text-center mt-20">Učitavanje...</p>;
