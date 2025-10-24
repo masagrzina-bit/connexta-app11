@@ -1,60 +1,51 @@
 'use client';
 
-import React, { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import Input from '@/app/components/Input';
+import Button from '@/app/components/Button';
 
 export default function ForgotPasswordPage() {
-  const supabase = createClientComponentClient();
-  const [identifier, setIdentifier] = useState(''); // email or phone
+  const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://connexta.app';
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
-
-    const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
-      redirectTo: `${siteUrl}/update-password`,
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://connexta.app/reset-password',
     });
-
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-      return;
-    }
-
-    setMessage('Please check your email for a message with your code / reset link. The code is 6 numbers long.');
     setLoading(false);
+
+    if (error) setError(error.message);
+    else setMessage('Check your email for the reset link!');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow p-6">
-        <h2 className="text-xl font-semibold mb-2">Find your account</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Please enter your email to search for your account.
-        </p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <h1 className="text-3xl font-bold mb-6">Forgot Password</h1>
+      <form
+        className="bg-white p-8 rounded shadow-md w-full max-w-md"
+        onSubmit={handleSendReset}
+      >
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {message && <p className="text-green-500 mb-4">{message}</p>}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email address"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            required
-            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+        <Input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-          <button disabled={loading} type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
-            {loading ? 'Sending...' : 'Search'}
-          </button>
-        </form>
-
-        {message && <p className="mt-4 text-sm text-gray-600">{message}</p>}
-      </div>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Sending...' : 'Send Reset Email'}
+        </Button>
+      </form>
     </div>
   );
 }
+

@@ -32,9 +32,10 @@ export default function Feed() {
       .eq('id', id);
 
     if (error) console.error(error);
-    else setPosts((prev) =>
-      prev.map((post) => (post.id === id ? { ...post, content: newContent } : post))
-    );
+    else
+      setPosts((prev) =>
+        prev.map((post) => (post.id === id ? { ...post, content: newContent } : post))
+      );
   };
 
   // 🔹 Funkcija za delete posta
@@ -55,7 +56,8 @@ export default function Feed() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
-          setPosts((prev) => [payload.new, ...prev]);
+          // Cast payload.new na PostType da TypeScript ne prigovara
+          setPosts((prev) => [payload.new as PostType, ...prev]);
         }
       )
       .subscribe();
@@ -81,3 +83,4 @@ export default function Feed() {
     </div>
   );
 }
+

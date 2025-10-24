@@ -2,49 +2,75 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import Input from '@/app/components/Input';
+import Button from '@/app/components/Button';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function ResetPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const token = searchParams.get('access_token') || '';
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
+    if (password !== confirmPassword) {
+      setError("Passwords don't match!");
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      accessToken: token,
+      password,
     });
 
-    if (error) setMessage(`❌ ${error.message}`);
-    else setMessage('✅ Proveri email da resetuješ lozinku.');
+    setLoading(false);
+
+    if (error) setError(error.message);
+    else {
+      setMessage('Password updated successfully!');
+      setTimeout(() => router.push('/login'), 2000);
+    }
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 justify-center items-center p-4">
-      <div className="bg-white p-10 rounded-xl shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Resetuj lozinku</h2>
-        <form onSubmit={handleReset} className="flex flex-col gap-4">
-          <input
-            type="email"
-            placeholder="Email adresa"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="border p-3 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
-            required
-          />
-          <button className="bg-yellow-500 text-white py-3 rounded font-semibold hover:bg-yellow-600 transition">
-            Pošalji link
-          </button>
-        </form>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+      <h1 className="text-3xl font-bold mb-6">Reset Password</h1>
+      <form
+        className="bg-white p-8 rounded shadow-md w-full max-w-md"
+        onSubmit={handleReset}
+      >
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {message && <p className="text-green-500 mb-4">{message}</p>}
 
-        {message && <p className="text-center mt-3 text-gray-700">{message}</p>}
+        <Input
+          type="password"
+          placeholder="New Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        />
 
-        <p className="text-center mt-4">
-          <a href="/login" className="text-blue-600 hover:underline">
-            Vrati se na prijavu
-          </a>
-        </p>
-      </div>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Updating...' : 'Update Password'}
+        </Button>
+      </form>
     </div>
   );
 }
-
