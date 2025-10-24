@@ -1,48 +1,59 @@
-"use client";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+'use client';
+
+import React, { useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const supabase = createClientComponentClient();
+  const [identifier, setIdentifier] = useState(''); // email or phone
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleReset = async (e: React.FormEvent) => {
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://connexta.app';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    setLoading(true);
+    setMessage(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://connexta.app/update-password",
+    const { error } = await supabase.auth.resetPasswordForEmail(identifier, {
+      redirectTo: `${siteUrl}/update-password`,
     });
 
-    if (error) setError(error.message);
-    else setMessage("Check your email for the password reset link.");
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setMessage('Please check your email for a message with your code / reset link. The code is 6 numbers long.');
+    setLoading(false);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
-      <div className="p-8 bg-white rounded-lg shadow-lg w-96">
-        <h1 className="text-2xl font-bold mb-4 text-center">Forgot Password</h1>
-        {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
-        {message && <p className="text-green-600 mb-3 text-center">{message}</p>}
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-2">Find your account</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Please enter your email to search for your account.
+        </p>
 
-        <form onSubmit={handleReset} className="flex flex-col">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="email"
-            placeholder="Enter your email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mb-3 p-2 border rounded"
+            placeholder="Email address"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             required
+            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-          >
-            Send Reset Link
+
+          <button disabled={loading} type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
+            {loading ? 'Sending...' : 'Search'}
           </button>
         </form>
+
+        {message && <p className="mt-4 text-sm text-gray-600">{message}</p>}
       </div>
     </div>
   );

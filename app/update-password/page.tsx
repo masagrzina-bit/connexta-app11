@@ -1,46 +1,91 @@
-"use client";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation';
 
 export default function UpdatePasswordPage() {
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const supabase = createClientComponentClient();
+  const router = useRouter();
 
-  const handleUpdate = async (e: React.FormEvent) => {
+  const [password, setPassword] = useState('');
+  const [status, setStatus] = useState<'idle' | 'ready' | 'done' | 'error'>('idle');
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Parse access_token and refresh_token from the URL hash (if present)
+    if (typeof window === 'undefined') return;
+
+    const hash = window.location.hash; // like #access_token=...&refresh_token=...&...
+    if (!hash) {
+      setStatus('error');
+      setMessage('No reset token found in URL. Make sure you opened the link from the email in the same browser.');
+      return;
+    }
+
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+
+    if (access_token && refresh_token) {
+      (async () => {
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        } as any);
+        if (error) {
+          setStatus('error');
+          setMessage(error.message);
+          return;
+        }
+        setStatus('ready');
+      })();
+    } else {
+      setStatus('error');
+      setMessage('Reset token not present in URL. Use the link from the email in the same browser.');
+    }
+  }, [supabase]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
+    setMessage(null);
 
     const { error } = await supabase.auth.updateUser({ password });
-
-    if (error) setError(error.message);
-    else setMessage("Password updated successfully! You can log in now.");
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setStatus('done');
+    setMessage('Password updated. Redirecting to dashboard...');
+    setTimeout(() => router.push('/dashboard'), 1200);
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
-      <div className="p-8 bg-white rounded-lg shadow-lg w-96">
-        <h1 className="text-2xl font-bold mb-4 text-center">Update Password</h1>
-        {error && <p className="text-red-500 mb-3 text-center">{error}</p>}
-        {message && <p className="text-green-600 mb-3 text-center">{message}</p>}
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow p-6">
+        <h2 className="text-xl font-semibold mb-2">Enter a new password</h2>
 
-        <form onSubmit={handleUpdate} className="flex flex-col">
-          <input
-            type="password"
-            placeholder="New password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mb-3 p-2 border rounded"
-            required
-          />
-          <button
-            type="submit"
-            className="bg-green-600 text-white py-2 rounded hover:bg-green-700"
-          >
-            Update Password
-          </button>
-        </form>
+        {status === 'error' && <p className="text-sm text-red-500 mb-3">{message}</p>}
+
+        {status === 'ready' && (
+          <form onSubmit={handleSave} className="space-y-3">
+            <input
+              type="password"
+              placeholder="New password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full border rounded px-3 py-2"
+            />
+            {message && <p className="text-sm text-red-500">{message}</p>}
+            <button type="submit" className="w-full bg-green-600 text-white py-2 rounded">
+              Save password
+            </button>
+          </form>
+        )}
+
+        {status === 'idle' && <p className="text-sm text-gray-600">Checking reset link...</p>}
+        {status === 'done' && <p className="text-sm text-green-600">{message}</p>}
       </div>
     </div>
   );
