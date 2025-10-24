@@ -1,25 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import CreatePost from './components/CreatePost/CreatePost';
+import { useEffect, useState } from 'react';
 import Feed from './components/Feed/Feed';
-import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
 
 const images = [
-  '/images/couple1.jpg',
-  '/images/couple2.jpg',
-  '/images/couple3.jpg',
-  '/images/couple4.jpg',
+  '/images/slide1.jpg',
+  '/images/slide2.jpg',
+  '/images/slide3.jpg',
 ];
 
 export default function HomePage() {
   const [current, setCurrent] = useState(0);
-  const [user, setUser] = useState<any>(null);
-  const router = useRouter();
 
-  // Slider effect
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrent((prev) => (prev + 1) % images.length);
@@ -27,120 +19,33 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Provera korisnika
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/login');
-      else setUser(data.user);
-    });
-  }, [router]);
-
   return (
-    <>
-      {/* SLIDER I NASLOV - NE MENJATI */}
-      <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div className="flex flex-col items-center justify-center min-h-screen text-center">
+      {/* Slideshow */}
+      <div className="relative w-full max-w-3xl h-80 overflow-hidden rounded-2xl shadow-lg mb-8">
         {images.map((src, index) => (
           <img
             key={index}
             src={src}
             alt={`Slide ${index + 1}`}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'opacity 1s ease-in-out',
-              opacity: index === current ? 1 : 0,
-            }}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+              index === current ? 'opacity-100' : 'opacity-0'
+            }`}
           />
         ))}
-
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            textAlign: 'center',
-          }}
-        >
-          <h1
-            style={{
-              fontSize: '4rem',
-              marginBottom: '1rem',
-              color: '#2563eb',
-              textShadow: '2px 2px 6px rgba(0,0,0,0.5)',
-              fontWeight: 'bold',
-              letterSpacing: '2px',
-              fontFamily: 'Arial, sans-serif',
-            }}
-          >
-            Connexta
-          </h1>
-
-          <p
-            style={{
-              fontSize: '1.5rem',
-              color: '#fff',
-              textShadow: '1px 1px 4px rgba(0,0,0,0.5)',
-            }}
-          >
-            Connect with friends and the world around you
-          </p>
-
-          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-            <Link href="/login">
-              <button
-                style={{
-                  padding: '0.75rem 2rem',
-                  backgroundColor: '#1877F2',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                }}
-              >
-                Login
-              </button>
-            </Link>
-
-            <Link href="/register">
-              <button
-                style={{
-                  padding: '0.75rem 2rem',
-                  backgroundColor: '#42B72A',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                }}
-              >
-                Register
-              </button>
-            </Link>
-          </div>
-        </div>
       </div>
 
-      {/* FEED I CREATE POST ISPOD SLIDERA */}
-      {user && (
-        <div className="max-w-xl mx-auto mt-10 px-4">
-          <CreatePost />
-          <Feed />
-        </div>
-      )}
-    </>
+      {/* Naslov */}
+      <h1 className="text-4xl font-extrabold text-blue-600 mb-4">Connexta</h1>
+      <p className="text-lg text-gray-700 mb-8">
+        Connect with friends and the world around you
+      </p>
+
+      {/* Feed */}
+      <div className="w-full max-w-3xl">
+        <Feed />
+      </div>
+    </div>
   );
 }
+
