@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,7 +16,7 @@ interface PostType {
 
 interface UserType {
   email: string | null;
-  user_metadata: { full_name: string; avatar_url?: string };
+  user_metadata: { full_name?: string; avatar_url?: string };
   created_at: string;
 }
 
@@ -25,7 +26,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<UserType | null>(null);
 
-  // Profile edit state
+  // Profile state
   const [name, setName] = useState('');
   const [emailProfile, setEmailProfile] = useState('');
   const [passwordProfile, setPasswordProfile] = useState('');
@@ -59,21 +60,32 @@ export default function DashboardPage() {
     }
   };
 
+  useEffect(() => {
+    fetchPosts();
+    fetchUser();
+
+    const subscription = supabase
+      .channel('public:posts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        (payload) => setPosts((prev) => [payload.new as PostType, ...prev])
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(subscription);
+  }, []);
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPost) return;
     setLoading(true);
     const { data, error } = await supabase
       .from('posts')
-      .insert([
-        {
-          content: newPost,
-          user: user?.user_metadata.full_name || 'You',
-          created_at: new Date().toISOString()
-        }
-      ])
+      .insert([{ content: newPost, user: user?.user_metadata.full_name || 'You', created_at: new Date().toISOString() }])
       .select();
     setLoading(false);
+
     if (error) console.error(error);
     else if (data) setPosts((prev) => [data[0], ...prev]);
     setNewPost('');
@@ -91,6 +103,11 @@ export default function DashboardPage() {
     else setPosts((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     setLoadingProfile(true);
@@ -98,57 +115,34 @@ export default function DashboardPage() {
     setProfileError(null);
 
     try {
-      // Update email
-      if (emailProfile !== user.email) {
-        const { error: emailError } = await supabase.auth.updateUser({ email: emailProfile });
-        if (emailError) throw emailError;
-      }
+      // Update name and email
+      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+        email: emailProfile,
+        password: passwordProfile || undefined,
+        data: { full_name: name }
+      });
 
-      // Update password
-      if (passwordProfile) {
-        const { error: passwordError } = await supabase.auth.updateUser({ password: passwordProfile });
-        if (passwordError) throw passwordError;
+      if (updateError) {
+        setProfileError(updateError.message);
+      } else {
+        setProfileMessage('Profile updated successfully!');
+        if (updateData?.user) {
+          setUser({
+            email: updateData.user.email ?? null,
+            user_metadata: {
+              full_name: updateData.user.user_metadata.full_name ?? '',
+              avatar_url: updateData.user.user_metadata.avatar_url ?? ''
+            },
+            created_at: updateData.user.created_at
+          });
+        }
+        setPasswordProfile('');
       }
-
-      // Update name in metadata
-      if (name !== user.user_metadata.full_name) {
-        const { error: metaError } = await supabase.auth.updateUser({
-          data: { full_name: name }
-        });
-        if (metaError) throw metaError;
-      }
-
-      setProfileMessage('Profile updated successfully!');
-      fetchUser();
-      setPasswordProfile('');
     } catch (err: any) {
-      setProfileError(err.message || 'Failed to update profile');
+      setProfileError(err.message || 'Error updating profile');
     } finally {
       setLoadingProfile(false);
     }
-  };
-
-  useEffect(() => {
-    fetchPosts();
-    fetchUser();
-
-    const subscription = supabase
-      .channel('public:posts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'posts' },
-        (payload) => setPosts((prev) => [payload.new as PostType, ...prev])
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/login';
   };
 
   return (
@@ -159,22 +153,16 @@ export default function DashboardPage() {
         {user && (
           <div className="mb-4 p-4 bg-white rounded shadow flex items-center gap-4">
             {user.user_metadata.avatar_url ? (
-              <img
-                src={user.user_metadata.avatar_url}
-                alt="Avatar"
-                className="w-16 h-16 rounded-full object-cover"
-              />
+              <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-16 h-16 rounded-full object-cover" />
             ) : (
               <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl">
-                {user.user_metadata.full_name.charAt(0).toUpperCase() || 'U'}
+                {user.user_metadata.full_name ? user.user_metadata.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
             <div>
               <p className="font-semibold text-lg">{user.user_metadata.full_name || 'No Name'}</p>
               <p className="text-sm text-gray-600">{user.email}</p>
-              <p className="text-xs text-gray-400">
-                Joined: {new Date(user.created_at).toLocaleDateString()}
-              </p>
+              <p className="text-xs text-gray-400">Joined: {new Date(user.created_at).toLocaleDateString()}</p>
             </div>
           </div>
         )}
@@ -184,11 +172,7 @@ export default function DashboardPage() {
         </Button>
 
         <form className="flex gap-2" onSubmit={handleCreatePost}>
-          <Input
-            placeholder="What's on your mind?"
-            value={newPost}
-            onChange={(e) => setNewPost(e.target.value)}
-          />
+          <Input placeholder="What's on your mind?" value={newPost} onChange={(e) => setNewPost(e.target.value)} />
           <Button type="submit" disabled={loading}>
             {loading ? 'Posting...' : 'Post'}
           </Button>
@@ -205,26 +189,9 @@ export default function DashboardPage() {
       <div className="mt-8 max-w-md mx-auto bg-white p-6 rounded shadow-md">
         <h2 className="text-2xl font-bold mb-4">Profile Settings</h2>
 
-        <Input
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
-        />
-        <Input
-          label="Email"
-          type="email"
-          value={emailProfile}
-          onChange={(e) => setEmailProfile(e.target.value)}
-          placeholder="Enter your email"
-        />
-        <Input
-          label="New Password"
-          type="password"
-          value={passwordProfile}
-          onChange={(e) => setPasswordProfile(e.target.value)}
-          placeholder="Enter new password"
-        />
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" />
+        <Input label="Email" type="email" value={emailProfile} onChange={(e) => setEmailProfile(e.target.value)} placeholder="Enter your email" />
+        <Input label="New Password" type="password" value={passwordProfile} onChange={(e) => setPasswordProfile(e.target.value)} placeholder="Enter new password" />
 
         <Button onClick={handleUpdateProfile} disabled={loadingProfile}>
           {loadingProfile ? 'Updating...' : 'Update Profile'}
@@ -236,4 +203,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
